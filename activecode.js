@@ -48,6 +48,7 @@ var ActiveCode = function(orig, div, initialCode, lang) {
               python3: true,
               imageProxy : 'http://image.runestone.academy:8080/320x'
              });
+        (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = _this.graphics;
 
         if(_this.language === 'python') {
             var myPromise = Sk.misceval.asyncToPromise(function() {
@@ -98,8 +99,9 @@ ActiveCode.prototype.createControls = function () {
 
 ActiveCode.prototype.createOutput = function () {
     this.output = document.createElement('pre');
-    $(this.output).append("Hello World");
+    this.graphics = document.createElement('div');
     this.outerDiv.appendChild(this.output)
+    this.outerDiv.appendChild(this.graphics);
 
 }
 
@@ -143,17 +145,6 @@ oldRunit = function(myDiv, theButton, includes, suffix) {
     Sk.canvas = myDiv + "_canvas";
     Sk.pre = myDiv + "_pre";
     var can = document.getElementById(Sk.canvas);
-    (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = Sk.canvas;
-
-    // The following lines reset the canvas so that each time the run button
-    // is pressed the turtle(s) get a clean canvas.
-    if (can) {
-        can.width = can.width;
-        if (Sk.tg) {
-            Sk.tg.canvasInit = false;
-            Sk.tg.turtleList = [];
-        }
-    }
     var timelimit = $("#"+myDiv).attr("time")
     // set execLimit in milliseconds  -- for student projects set this to
     // 25 seconds -- just less than Chrome's own timer.
@@ -185,8 +176,7 @@ oldRunit = function(myDiv, theButton, includes, suffix) {
 
 
 $(document).ready(function() {
-    $('.activecode').each( function(index ) {
-        var a = new ActiveCode(this, this.id, $(this).text(), this.lang);
-        edList.push(a);
+    $('[data-component=activecode]').each( function(index ) {
+        edList.push(new ActiveCode(this, this.id, $(this).text(), $(this).data('lang')));
     });
 })
