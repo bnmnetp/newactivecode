@@ -49,7 +49,8 @@ var ActiveCode = function(orig, div, initialCode, lang) {
               imageProxy : 'http://image.runestone.academy:8080/320x'
              });
         (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = _this.graphics;
-
+        $(_this.codeDiv).switchClass("col-md-12","col-md-6",500)
+        $(_this.outDiv).show(500);
         if(_this.language === 'python') {
             var myPromise = Sk.misceval.asyncToPromise(function() {
                 return Sk.importMainWithBody("<stdin>", false, _this.editor.getValue(), true);
@@ -83,7 +84,8 @@ ActiveCode.prototype.createEditor = function (index) {
     var newdiv = document.createElement('div');
     $(newdiv).addClass("ac_section alert alert-warning");
     var codeDiv = document.createElement("div");
-    $(codeDiv).addClass("ac_code_div");
+    $(codeDiv).addClass("ac_code_div col-md-12");
+    this.codeDiv = codeDiv;
     newdiv.id = this.divid;
     newdiv.lang = this.language;
     this.outerDiv = newdiv;
@@ -91,6 +93,7 @@ ActiveCode.prototype.createEditor = function (index) {
     $(this.origElem).replaceWith(newdiv);
     newdiv.appendChild(codeDiv);
     return CodeMirror(codeDiv, {value: this.code, lineNumbers: true, mode: newdiv.lang});
+
 
     }
 
@@ -107,14 +110,14 @@ ActiveCode.prototype.createControls = function () {
 
 ActiveCode.prototype.createOutput = function () {
     var outDiv = document.createElement("div")
-    $(outDiv).addClass("ac_output");
+    $(outDiv).addClass("ac_output col-md-6");
+    this.outDiv = outDiv;
     this.output = document.createElement('pre');
     this.graphics = document.createElement('div');
     $(this.graphics).addClass("ac-canvas");
     outDiv.appendChild(this.output)
     outDiv.appendChild(this.graphics);
     this.outerDiv.appendChild(outDiv);
-    $(this.outDiv).show();
     clearDiv = document.createElement("div");
     $(clearDiv).css("clear","both");
     this.outerDiv.appendChild(clearDiv);
