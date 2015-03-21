@@ -23,7 +23,7 @@ var ActiveCode = function(orig, div, initialCode, lang) {
 
     this.ouputfun = function(text) {
         // bnm python 3
-        x = text;
+        var x = text;
         if (x.charAt(0) == '(') {
             x = x.slice(1, -1);
             x = '[' + x + ']';
@@ -37,9 +37,9 @@ var ActiveCode = function(orig, div, initialCode, lang) {
         text = x;
         text = text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br/>");
         $(_this.output).append(text);
-    }
+    };
 
-    this.runit = function() {
+    this.runProg = function() {
         // In this function use _this because this will be the button
         console.log("running " + _this.divid);
 
@@ -73,41 +73,57 @@ var ActiveCode = function(orig, div, initialCode, lang) {
     }
 
     this.editor = this.createEditor();
-    this.createControls();
     this.createOutput();
+    this.createControls();
+
 
 }
 
 ActiveCode.prototype.createEditor = function (index) {
-        var newdiv = document.createElement('div')
-        newdiv.id = this.divid;
-        newdiv.lang = this.language;
-        this.outerDiv = newdiv;
+    var newdiv = document.createElement('div');
+    $(newdiv).addClass("ac_section alert alert-warning");
+    var codeDiv = document.createElement("div");
+    $(codeDiv).addClass("ac_code_div");
+    newdiv.id = this.divid;
+    newdiv.lang = this.language;
+    this.outerDiv = newdiv;
 
-        $(this.origElem).replaceWith(newdiv);
-
-        return CodeMirror(newdiv, {value: this.code, lineNumbers: true, mode: newdiv.lang});
+    $(this.origElem).replaceWith(newdiv);
+    newdiv.appendChild(codeDiv);
+    return CodeMirror(codeDiv, {value: this.code, lineNumbers: true, mode: newdiv.lang});
 
     }
 
 ActiveCode.prototype.createControls = function () {
-    var butt = document.createElement('button');
-    $(butt).text('Run')
-    this.outerDiv.appendChild(butt)
-    $(butt).click(this.runit);
+    var ctrlDiv = document.createElement("div");
+    $(ctrlDiv).addClass("ac_actions");
+    var butt = document.createElement("button");
+    $(butt).text("Run");
+    $(butt).addClass("btn btn-success")
+    ctrlDiv.appendChild(butt);
+    $(this.outerDiv).prepend(ctrlDiv);
+    $(butt).click(this.runProg);
 }
 
 ActiveCode.prototype.createOutput = function () {
+    var outDiv = document.createElement("div")
+    $(outDiv).addClass("ac_output");
     this.output = document.createElement('pre');
     this.graphics = document.createElement('div');
-    this.outerDiv.appendChild(this.output)
-    this.outerDiv.appendChild(this.graphics);
+    $(this.graphics).addClass("ac-canvas");
+    outDiv.appendChild(this.output)
+    outDiv.appendChild(this.graphics);
+    this.outerDiv.appendChild(outDiv);
+    $(this.outDiv).show();
+    clearDiv = document.createElement("div");
+    $(clearDiv).css("clear","both");
+    this.outerDiv.appendChild(clearDiv);
 
 }
 
 
 
-oldRunit = function(myDiv, theButton, includes, suffix) {
+oldrunit = function(myDiv, theButton, includes, suffix) {
     //var prog = document.getElementById(myDiv + "_code").value;
 
     Sk.divid = myDiv;
@@ -179,4 +195,4 @@ $(document).ready(function() {
     $('[data-component=activecode]').each( function(index ) {
         edList.push(new ActiveCode(this, this.id, $(this).text(), $(this).data('lang')));
     });
-})
+});
