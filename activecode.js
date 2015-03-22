@@ -2,15 +2,20 @@
  * Created by bmiller on 3/19/15.
  */
 
-var edList = [];
+var edList = {};
 
-var ActiveCode = function(orig, div, initialCode, lang) {
+var ActiveCode = function(orig) {
     var _this = this;
     var suffStart = -1;
     this.origElem = orig;
     this.divid = orig.id;
     this.code = $(orig).text();
     this.language = $(orig).data('lang');
+    this.timelimit = $(orig).data('timelimit');
+    this.includes = $(orig).data('include')
+    if(this.includes !== undefined) {
+        this.includes = this.includes.split(/\s+/);
+    }
     this.outerDiv = '';
 
     suffStart = this.code.indexOf('====');
@@ -50,6 +55,17 @@ var ActiveCode = function(orig, div, initialCode, lang) {
         // In this function use _this because this will be the button
         var prog = _this.editor.getValue();
         // if includes
+        $(_this.output).text('')
+
+        if (_this.includes !== undefined) {
+            // iterate over the includes, in-order prepending to prog
+            pretext = ''
+            for (var x in _this.includes) {
+                pretext = pretext + edList[_this.includes[x]].editor.getValue();
+            }
+            prog = pretext + prog
+        }
+
         if(_this.suffix) {
             prog = prog + _this.suffix;
         }
@@ -59,7 +75,7 @@ var ActiveCode = function(orig, div, initialCode, lang) {
               python3: true,
               imageProxy : 'http://image.runestone.academy:8080/320x'
              });
-
+        _this.setTimeLimit();
         (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = _this.graphics;
         $(_this.runButton).attr('disabled', 'disabled');
         $(_this.codeDiv).switchClass("col-md-12","col-md-6",{duration:500,queue:false})
@@ -85,6 +101,12 @@ var ActiveCode = function(orig, div, initialCode, lang) {
             //$('#'+myDiv+'_htmlout').show();
             //$('#'+myDiv+'_htmlout').append('<iframe class="activehtml" id="' + myDiv + '_iframe" srcdoc="' +
             //prog.replace(/"/g,"'") + '">' + '</iframe>');
+        }
+
+        if (typeof(allVisualizers) != "undefined") {
+            $.each(allVisualizers, function (i, e) {
+                e.redrawConnectors();
+            });
         }
 
     }
@@ -116,9 +138,20 @@ ActiveCode.prototype.createEditor = function (index) {
             editor.setSize($(this).width(), $(this).height());
             editor.refresh();
         }
-    })
+    });
+
+    // give the user a visual cue that they have changed but not saved
+    editor.on('change', function () {
+        if (editor.acEditEvent == false || editor.acEditEvent === undefined) {
+            $(editor.getWrapperElement()).css('border-top', '2px solid #b43232');
+            $(editor.getWrapperElement()).css('border-bottom', '2px solid #b43232');
+            //logBookEvent({'event': 'activecode', 'act': 'edit', 'div_id': this.divid});
+        }
+        editor.acEditEvent = true;
+        });
+
     this.editor = editor;
-    }
+    };
 
 ActiveCode.prototype.createControls = function () {
     var ctrlDiv = document.createElement("div");
@@ -131,12 +164,13 @@ ActiveCode.prototype.createControls = function () {
     ctrlDiv.appendChild(butt);
     this.runButton = butt;
     $(butt).click(this.runProg);
-    
+
     // Save
     butt = document.createElement("button");
     $(butt).addClass("ac_opt btn btn-default");
     $(butt).text("Save");
     $(butt).css("margin-left","10px");
+    this.saveButton = butt;
     ctrlDiv.appendChild(butt);
 
     // Load
@@ -144,6 +178,7 @@ ActiveCode.prototype.createControls = function () {
     $(butt).addClass("ac_opt btn btn-default");
     $(butt).text("Load");
     $(butt).css("margin-left","10px");
+    this.loadButton = butt;
     ctrlDiv.appendChild(butt);
 
     $(this.outerDiv).prepend(ctrlDiv);
@@ -186,49 +221,17 @@ ActiveCode.prototype.toggleEditorVisibility = function () {
 
 }
 
-
-oldrunit = function(myDiv, theButton, includes, suffix) {
-    //var prog = document.getElementById(myDiv + "_code").value;
-
-    Sk.divid = myDiv;
-
-
-    $("#" + myDiv + "_errinfo").remove();
-    $("#" + myDiv + "_coach_div").hide();
-
-    var editor = cm_editors[myDiv + "_code"];
-    if (editor.acEditEvent) {
-        logBookEvent({'event': 'activecode', 'act': 'edit', 'div_id': myDiv}); // Log the edit event
-        editor.acEditEvent = false;
+ActiveCode.prototype.setTimeLimit = function (timer) {
+    var timelimit = this.timeLimit
+    if (timer !== undefined ) {
+        timelimit = timer
     }
-    var prog = "";
-    var text = "";
-    if (includes !== undefined) {
-        // iterate over the includes, in-order prepending to prog
-        for (var x in includes) {
-            text = cm_editors[includes[x] + "_code"].getValue();
-            prog = prog + text + "\n"
-        }
-    }
-    prog = prog + editor.getValue();
-
-    var suffix;
-    suffix = $('#'+myDiv+'_suffix').text() || '';
-
-    prog = prog + '\n' + suffix;
-
-    var mypre = document.getElementById(myDiv + "_pre");
-    if (mypre) mypre.innerHTML = '';
-    Sk.canvas = myDiv + "_canvas";
-    Sk.pre = myDiv + "_pre";
-    var can = document.getElementById(Sk.canvas);
-    var timelimit = $("#"+myDiv).attr("time")
     // set execLimit in milliseconds  -- for student projects set this to
     // 25 seconds -- just less than Chrome's own timer.
-    if (prog.indexOf('ontimer') > -1 ||
-        prog.indexOf('onclick') > -1 ||
-        prog.indexOf('onkey') > -1  ||
-        prog.indexOf('setDelay') > -1 ) {
+    if (this.code.indexOf('ontimer') > -1 ||
+        this.code.indexOf('onclick') > -1 ||
+        this.code.indexOf('onkey') > -1  ||
+        this.code.indexOf('setDelay') > -1 ) {
         Sk.execLimit = null;
     } else {
         if (timelimit === "off") {
@@ -239,21 +242,12 @@ oldrunit = function(myDiv, theButton, includes, suffix) {
             Sk.execLimit = 25000;
         }
     }
-    // configure Skulpt output function, and module reader
-    if (!Sk.isTurtleProgram) {
-        $(theButton).removeAttr('disabled');
-    }
-    if (typeof(allVisualizers) != "undefined") {
-        $.each(allVisualizers, function (i, e) {
-            e.redrawConnectors();
-        });
-    }
-}
 
+}
 
 
 $(document).ready(function() {
     $('[data-component=activecode]').each( function(index ) {
-        edList.push(new ActiveCode(this));
+        edList[this.id] = new ActiveCode(this);
     });
 });
