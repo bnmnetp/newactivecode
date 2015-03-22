@@ -6,11 +6,18 @@ var edList = [];
 
 var ActiveCode = function(orig, div, initialCode, lang) {
     var _this = this;
+    var suffStart = -1;
     this.origElem = orig;
-    this.divid = div;
-    this.code = initialCode;
-    this.language = lang;
+    this.divid = orig.id;
+    this.code = $(orig).text();
+    this.language = $(orig).data('lang');
     this.outerDiv = '';
+
+    suffStart = this.code.indexOf('====');
+    if (suffStart > -1) {
+        this.suffix = this.code.substring(suffStart+5);
+        this.code = this.code.substring(0,suffStart);
+    }
 
     this.output = '' // create pre for output
     this.graphics = '' // create div for turtle graphics
@@ -41,21 +48,31 @@ var ActiveCode = function(orig, div, initialCode, lang) {
 
     this.runProg = function() {
         // In this function use _this because this will be the button
-        console.log("running " + _this.divid);
+        var prog = _this.editor.getValue();
+        // if includes
+        if(_this.suffix) {
+            prog = prog + _this.suffix;
+        }
 
         Sk.configure({output : _this.ouputfun,
               read   : _this.builtinRead,
               python3: true,
               imageProxy : 'http://image.runestone.academy:8080/320x'
              });
+
         (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = _this.graphics;
-        $(_this.codeDiv).switchClass("col-md-12","col-md-6",500)
-        $(_this.outDiv).show(500);
+        $(_this.runButton).attr('disabled', 'disabled');
+        $(_this.codeDiv).switchClass("col-md-12","col-md-6",{duration:500,queue:false})
+        $(_this.outDiv).show({duration:700,queue:false});
         if(_this.language === 'python') {
             var myPromise = Sk.misceval.asyncToPromise(function() {
-                return Sk.importMainWithBody("<stdin>", false, _this.editor.getValue(), true);
+                return Sk.importMainWithBody("<stdin>", false, prog, true);
             });
-            myPromise.then(function(mod) {}, function(err) {
+            myPromise.then(function(mod) {
+                $(_this.runButton).removeAttr('disabled');
+                logRunEvent({'div_id': myDiv, 'code': prog, 'errinfo': 'success'}); // Log the run event
+            },
+                function(err) {
                 //logRunEvent({'div_id': _this.divid, 'code': _this.prog, 'errinfo': err.toString()}); // Log the run event
                 console.log(err.toString());
                 addErrorMessage(err, myDiv)
@@ -69,11 +86,10 @@ var ActiveCode = function(orig, div, initialCode, lang) {
             //$('#'+myDiv+'_htmlout').append('<iframe class="activehtml" id="' + myDiv + '_iframe" srcdoc="' +
             //prog.replace(/"/g,"'") + '">' + '</iframe>');
         }
-        //logRunEvent({'div_id': myDiv, 'code': prog, 'errinfo': 'success'}); // Log the run event
 
     }
 
-    this.editor = this.createEditor();
+    this.createEditor();
     this.createOutput();
     this.createControls();
 
@@ -92,20 +108,46 @@ ActiveCode.prototype.createEditor = function (index) {
 
     $(this.origElem).replaceWith(newdiv);
     newdiv.appendChild(codeDiv);
-    return CodeMirror(codeDiv, {value: this.code, lineNumbers: true, mode: newdiv.lang});
+    var editor = CodeMirror(codeDiv, {value: this.code, lineNumbers: true, mode: newdiv.lang});
 
-
+    // Make the editor resizable
+    $(editor.getWrapperElement()).resizable({
+        resize: function() {
+            editor.setSize($(this).width(), $(this).height());
+            editor.refresh();
+        }
+    })
+    this.editor = editor;
     }
 
 ActiveCode.prototype.createControls = function () {
     var ctrlDiv = document.createElement("div");
     $(ctrlDiv).addClass("ac_actions");
+
+    // Run
     var butt = document.createElement("button");
     $(butt).text("Run");
     $(butt).addClass("btn btn-success")
     ctrlDiv.appendChild(butt);
-    $(this.outerDiv).prepend(ctrlDiv);
+    this.runButton = butt;
     $(butt).click(this.runProg);
+    
+    // Save
+    butt = document.createElement("button");
+    $(butt).addClass("ac_opt btn btn-default");
+    $(butt).text("Save");
+    $(butt).css("margin-left","10px");
+    ctrlDiv.appendChild(butt);
+
+    // Load
+    butt = document.createElement("button");
+    $(butt).addClass("ac_opt btn btn-default");
+    $(butt).text("Load");
+    $(butt).css("margin-left","10px");
+    ctrlDiv.appendChild(butt);
+
+    $(this.outerDiv).prepend(ctrlDiv);
+
 }
 
 ActiveCode.prototype.createOutput = function () {
@@ -124,17 +166,33 @@ ActiveCode.prototype.createOutput = function () {
 
 }
 
+ActiveCode.prototype.saveEditor = function () {
+
+}
+
+ActiveCode.prototype.loadEditor = function () {
+
+}
+
+ActiveCode.prototype.showCodeCoach = function () {
+
+}
+
+ActiveCode.prototype.showCodeLens = function () {
+
+}
+
+ActiveCode.prototype.toggleEditorVisibility = function () {
+
+}
 
 
 oldrunit = function(myDiv, theButton, includes, suffix) {
     //var prog = document.getElementById(myDiv + "_code").value;
 
     Sk.divid = myDiv;
-    $(theButton).attr('disabled', 'disabled');
-    Sk.isTurtleProgram = false;
-    if (theButton !== undefined) {
-        Sk.runButton = theButton;
-    }
+
+
     $("#" + myDiv + "_errinfo").remove();
     $("#" + myDiv + "_coach_div").hide();
 
@@ -196,6 +254,6 @@ oldrunit = function(myDiv, theButton, includes, suffix) {
 
 $(document).ready(function() {
     $('[data-component=activecode]').each( function(index ) {
-        edList.push(new ActiveCode(this, this.id, $(this).text(), $(this).data('lang')));
+        edList.push(new ActiveCode(this));
     });
 });
