@@ -2,9 +2,24 @@
  * Created by bmiller on 3/19/15.
  */
 
+function RunestoneBase() {
+
+}
+
+RunestoneBase.prototype.logBookEvent = function(info) {
+    console.log("logging event " + this.divid);
+};
+
+RunestoneBase.prototype.logRunEvent = function(info) {
+    console.log("running " + this.divid);
+};
+
 var edList = {};
 
-var ActiveCode = function(orig) {
+ActiveCode.prototype = new RunestoneBase();
+
+function ActiveCode(orig) {
+    RunestoneBase.apply( this, arguments );  // call parent constructor
     var _this = this;
     var suffStart = -1;
     this.origElem = orig;
@@ -12,7 +27,7 @@ var ActiveCode = function(orig) {
     this.code = $(orig).text();
     this.language = $(orig).data('lang');
     this.timelimit = $(orig).data('timelimit');
-    this.includes = $(orig).data('include')
+    this.includes = $(orig).data('include');
     if(this.includes !== undefined) {
         this.includes = this.includes.split(/\s+/);
     }
@@ -24,14 +39,14 @@ var ActiveCode = function(orig) {
         this.code = this.code.substring(0,suffStart);
     }
 
-    this.output = '' // create pre for output
-    this.graphics = '' // create div for turtle graphics
+    this.output = ""; // create pre for output
+    this.graphics = ""; // create div for turtle graphics
 
     this.builtinRead = function (x) {
         if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
             throw "File not found: '" + x + "'";
         return Sk.builtinFiles["files"][x];
-    }
+    };
 
     this.ouputfun = function(text) {
         // bnm python 3
@@ -53,14 +68,15 @@ var ActiveCode = function(orig) {
 
     this.runProg = function() {
         // In this function use _this because this will be the button
+        var pretext;
         var prog = _this.editor.getValue();
         // if includes
-        $(_this.output).text('')
+        $(_this.output).text('');
 
         if (_this.includes !== undefined) {
             // iterate over the includes, in-order prepending to prog
-            pretext = ''
-            for (var x in _this.includes) {
+            pretext = "";
+            for (var x=0; x < _this.includes.length; x++) {
                 pretext = pretext + edList[_this.includes[x]].editor.getValue();
             }
             prog = pretext + prog
@@ -78,7 +94,7 @@ var ActiveCode = function(orig) {
         _this.setTimeLimit();
         (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = _this.graphics;
         $(_this.runButton).attr('disabled', 'disabled');
-        $(_this.codeDiv).switchClass("col-md-12","col-md-6",{duration:500,queue:false})
+        $(_this.codeDiv).switchClass("col-md-12","col-md-6",{duration:500,queue:false});
         $(_this.outDiv).show({duration:700,queue:false});
         if(_this.language === 'python') {
             var myPromise = Sk.misceval.asyncToPromise(function() {
@@ -86,7 +102,7 @@ var ActiveCode = function(orig) {
             });
             myPromise.then(function(mod) {
                 $(_this.runButton).removeAttr('disabled');
-                logRunEvent({'div_id': myDiv, 'code': prog, 'errinfo': 'success'}); // Log the run event
+                _this.logRunEvent({'div_id': _this.id, 'code': prog, 'errinfo': 'success'}); // Log the run event
             },
                 function(err) {
                 //logRunEvent({'div_id': _this.divid, 'code': _this.prog, 'errinfo': err.toString()}); // Log the run event
@@ -109,7 +125,7 @@ var ActiveCode = function(orig) {
             });
         }
 
-    }
+    };
 
     this.createEditor();
     this.createOutput();
@@ -141,14 +157,14 @@ ActiveCode.prototype.createEditor = function (index) {
     });
 
     // give the user a visual cue that they have changed but not saved
-    editor.on('change', function () {
+    editor.on('change', (function () {
         if (editor.acEditEvent == false || editor.acEditEvent === undefined) {
             $(editor.getWrapperElement()).css('border-top', '2px solid #b43232');
             $(editor.getWrapperElement()).css('border-bottom', '2px solid #b43232');
-            //logBookEvent({'event': 'activecode', 'act': 'edit', 'div_id': this.divid});
+            this.logBookEvent({'event': 'activecode', 'act': 'edit', 'div_id': this.divid});
         }
         editor.acEditEvent = true;
-        });
+        }).bind(this));  // use bind to preserve *this* inside the on handler.
 
     this.editor = editor;
     };
@@ -160,7 +176,7 @@ ActiveCode.prototype.createControls = function () {
     // Run
     var butt = document.createElement("button");
     $(butt).text("Run");
-    $(butt).addClass("btn btn-success")
+    $(butt).addClass("btn btn-success");
     ctrlDiv.appendChild(butt);
     this.runButton = butt;
     $(butt).click(this.runProg);
@@ -183,46 +199,46 @@ ActiveCode.prototype.createControls = function () {
 
     $(this.outerDiv).prepend(ctrlDiv);
 
-}
+};
 
 ActiveCode.prototype.createOutput = function () {
-    var outDiv = document.createElement("div")
+    var outDiv = document.createElement("div");
     $(outDiv).addClass("ac_output col-md-6");
     this.outDiv = outDiv;
     this.output = document.createElement('pre');
     this.graphics = document.createElement('div');
     $(this.graphics).addClass("ac-canvas");
-    outDiv.appendChild(this.output)
+    outDiv.appendChild(this.output);
     outDiv.appendChild(this.graphics);
     this.outerDiv.appendChild(outDiv);
     clearDiv = document.createElement("div");
     $(clearDiv).css("clear","both");
     this.outerDiv.appendChild(clearDiv);
 
-}
+};
 
 ActiveCode.prototype.saveEditor = function () {
 
-}
+};
 
 ActiveCode.prototype.loadEditor = function () {
 
-}
+};
 
 ActiveCode.prototype.showCodeCoach = function () {
 
-}
+};
 
 ActiveCode.prototype.showCodeLens = function () {
 
-}
+};
 
 ActiveCode.prototype.toggleEditorVisibility = function () {
 
-}
+};
 
 ActiveCode.prototype.setTimeLimit = function (timer) {
-    var timelimit = this.timeLimit
+    var timelimit = this.timeLimit;
     if (timer !== undefined ) {
         timelimit = timer
     }
@@ -243,7 +259,7 @@ ActiveCode.prototype.setTimeLimit = function (timer) {
         }
     }
 
-}
+};
 
 
 $(document).ready(function() {
