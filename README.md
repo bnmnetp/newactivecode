@@ -3,7 +3,7 @@
 
 See:  https://github.com/bnmnetp/runestone/wiki/RSE-0001
 
-To try this out quickly do
+To try this out quickly use [bower](http://bower.io/#install-bower) to install these dependencies.
 
     bower install codemirror
     bower install skulpt
