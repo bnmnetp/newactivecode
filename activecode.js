@@ -45,96 +45,9 @@ function ActiveCode(orig) {
         this.code = this.code.substring(0,suffStart);
     }
 
-
-    this.builtinRead = function (x) {
-        if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
-            throw "File not found: '" + x + "'";
-        return Sk.builtinFiles["files"][x];
-    };
-
-    this.ouputfun = function(text) {
-        // bnm python 3
-        var x = text;
-        if (x.charAt(0) == '(') {
-            x = x.slice(1, -1);
-            x = '[' + x + ']';
-            try {
-                var xl = eval(x);
-                xl = xl.map(pyStr);
-                x = xl.join(' ');
-            } catch (err) {
-            }
-        }
-        text = x;
-        text = text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br/>");
-        $(_this.output).append(text);
-    };
-
-    this.runProg = function() {
-        // In this function use _this because this will be the button
-        var pretext;
-        var prog = _this.editor.getValue();
-        // if includes
-        $(_this.output).text('');
-
-        if (_this.includes !== undefined) {
-            // iterate over the includes, in-order prepending to prog
-            pretext = "";
-            for (var x=0; x < _this.includes.length; x++) {
-                pretext = pretext + edList[_this.includes[x]].editor.getValue();
-            }
-            prog = pretext + prog
-        }
-
-        if(_this.suffix) {
-            prog = prog + _this.suffix;
-        }
-
-        Sk.configure({output : _this.ouputfun,
-              read   : _this.builtinRead,
-              python3: true,
-              imageProxy : 'http://image.runestone.academy:8080/320x'
-             });
-        _this.setTimeLimit();
-        (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = _this.graphics;
-        $(_this.runButton).attr('disabled', 'disabled');
-        $(_this.codeDiv).switchClass("col-md-12","col-md-6",{duration:500,queue:false});
-        $(_this.outDiv).show({duration:700,queue:false});
-        if(_this.language === 'python') {
-            var myPromise = Sk.misceval.asyncToPromise(function() {
-                return Sk.importMainWithBody("<stdin>", false, prog, true);
-            });
-            myPromise.then(function(mod) {
-                $(_this.runButton).removeAttr('disabled');
-                _this.logRunEvent({'div_id': _this.id, 'code': prog, 'errinfo': 'success'}); // Log the run event
-            },
-                function(err) {
-                //logRunEvent({'div_id': _this.divid, 'code': _this.prog, 'errinfo': err.toString()}); // Log the run event
-                console.log(err.toString());
-                addErrorMessage(err, myDiv)
-            });
-        } else if (_this.language === 'javascript') {
-            eval(prog);
-        } else {
-            // html
-            //$('#'+myDiv+'_iframe').remove();
-            //$('#'+myDiv+'_htmlout').show();
-            //$('#'+myDiv+'_htmlout').append('<iframe class="activehtml" id="' + myDiv + '_iframe" srcdoc="' +
-            //prog.replace(/"/g,"'") + '">' + '</iframe>');
-        }
-
-        if (typeof(allVisualizers) != "undefined") {
-            $.each(allVisualizers, function (i, e) {
-                e.redrawConnectors();
-            });
-        }
-
-    };
-
     this.createEditor();
     this.createOutput();
     this.createControls();
-
 
 }
 
@@ -183,7 +96,7 @@ ActiveCode.prototype.createControls = function () {
     $(butt).addClass("btn btn-success");
     ctrlDiv.appendChild(butt);
     this.runButton = butt;
-    $(butt).click(this.runProg);
+    $(butt).click(this.runProg.bind(this));
 
     // Save
     butt = document.createElement("button");
@@ -264,6 +177,91 @@ ActiveCode.prototype.setTimeLimit = function (timer) {
     }
 
 };
+
+ActiveCode.prototype.builtinRead = function (x) {
+        if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
+            throw "File not found: '" + x + "'";
+        return Sk.builtinFiles["files"][x];
+    };
+
+ActiveCode.prototype.ouputfun = function(text) {
+        // bnm python 3
+        var x = text;
+        if (x.charAt(0) == '(') {
+            x = x.slice(1, -1);
+            x = '[' + x + ']';
+            try {
+                var xl = eval(x);
+                xl = xl.map(pyStr);
+                x = xl.join(' ');
+            } catch (err) {
+            }
+        }
+        text = x;
+        text = text.replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\n/g, "<br/>");
+        $(this.output).append(text);
+    };
+
+
+ActiveCode.prototype.runProg = function() {
+        var pretext;
+        var prog = this.editor.getValue();
+        // if includes
+        $(this.output).text('');
+
+        if (this.includes !== undefined) {
+            // iterate over the includes, in-order prepending to prog
+            pretext = "";
+            for (var x=0; x < this.includes.length; x++) {
+                pretext = pretext + edList[this.includes[x]].editor.getValue();
+            }
+            prog = pretext + prog
+        }
+
+        if(this.suffix) {
+            prog = prog + this.suffix;
+        }
+
+        Sk.configure({output : this.ouputfun.bind(this),
+              read   : this.builtinRead,
+              python3: true,
+              imageProxy : 'http://image.runestone.academy:8080/320x'
+             });
+        this.setTimeLimit();
+        (Sk.TurtleGraphics || (Sk.TurtleGraphics = {})).target = this.graphics;
+        $(this.runButton).attr('disabled', 'disabled');
+        $(this.codeDiv).switchClass("col-md-12","col-md-6",{duration:500,queue:false});
+        $(this.outDiv).show({duration:700,queue:false});
+        if(this.language === 'python') {
+            var myPromise = Sk.misceval.asyncToPromise(function() {
+                return Sk.importMainWithBody("<stdin>", false, prog, true);
+            });
+            myPromise.then((function(mod) {
+                $(this.runButton).removeAttr('disabled');
+                this.logRunEvent({'div_id': this.id, 'code': prog, 'errinfo': 'success'}); // Log the run event
+            }).bind(this),
+                function(err) {
+                //logRunEvent({'div_id': this.divid, 'code': this.prog, 'errinfo': err.toString()}); // Log the run event
+                console.log(err.toString());
+                addErrorMessage(err, myDiv)
+            });
+        } else if (this.language === 'javascript') {
+            eval(prog);
+        } else {
+            // html
+            //$('#'+myDiv+'_iframe').remove();
+            //$('#'+myDiv+'_htmlout').show();
+            //$('#'+myDiv+'_htmlout').append('<iframe class="activehtml" id="' + myDiv + '_iframe" srcdoc="' +
+            //prog.replace(/"/g,"'") + '">' + '</iframe>');
+        }
+
+        if (typeof(allVisualizers) != "undefined") {
+            $.each(allVisualizers, function (i, e) {
+                e.redrawConnectors();
+            });
+        }
+
+    };
 
 
 $(document).ready(function() {
