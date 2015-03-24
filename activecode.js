@@ -119,17 +119,29 @@ ActiveCode.prototype.createControls = function () {
 };
 
 ActiveCode.prototype.createOutput = function () {
+    // Create a parent div with two elements:  pre for standard output and a div
+    // to hold turtle graphics output.  We use a div in case the turtle changes from
+    // using a canvas to using some other element like svg in the future.
     var outDiv = document.createElement("div");
     $(outDiv).addClass("ac_output col-md-6");
     this.outDiv = outDiv;
     this.output = document.createElement('pre');
+
     this.graphics = document.createElement('div');
     $(this.graphics).addClass("ac-canvas");
+    // This bit of magic adds an event which waits for a canvas child to be created on our
+    // newly created div.  When a canvas child is added we add a new class so that the visible
+    // canvas can be styled in CSS.  Which a the moment means just adding a border.
+    $(this.graphics).on("DOMNodeInserted", 'canvas', (function(e) {
+        $(this.graphics).addClass("visible-ac-canvas")
+    }).bind(this));
+
     outDiv.appendChild(this.output);
     outDiv.appendChild(this.graphics);
     this.outerDiv.appendChild(outDiv);
+
     clearDiv = document.createElement("div");
-    $(clearDiv).css("clear","both");
+    $(clearDiv).css("clear","both");  // needed to make parent div resize properly
     this.outerDiv.appendChild(clearDiv);
 
 };
