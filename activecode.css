@@ -87,3 +87,7 @@
     max-height: 300px;
     overflow: auto;
 }
+
+.ac-canvas {
+    border: 2px solid black;
+}
