@@ -28,10 +28,16 @@ function ActiveCode(orig) {
     this.language = $(orig).data('lang');
     this.timelimit = $(orig).data('timelimit');
     this.includes = $(orig).data('include');
+    this.runButton = null;
+    this.saveButton = null;
+    this.loadButton = null;
+    this.outerDiv = null;
+    this.output = null; // create pre for output
+    this.graphics = null; // create div for turtle graphics
+
     if(this.includes !== undefined) {
         this.includes = this.includes.split(/\s+/);
     }
-    this.outerDiv = '';
 
     suffStart = this.code.indexOf('====');
     if (suffStart > -1) {
@@ -39,8 +45,6 @@ function ActiveCode(orig) {
         this.code = this.code.substring(0,suffStart);
     }
 
-    this.output = ""; // create pre for output
-    this.graphics = ""; // create div for turtle graphics
 
     this.builtinRead = function (x) {
         if (Sk.builtinFiles === undefined || Sk.builtinFiles["files"][x] === undefined)
