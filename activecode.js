@@ -18,10 +18,19 @@ var edList = {};
 
 ActiveCode.prototype = new RunestoneBase();
 
-function ActiveCode(orig) {
+// separate into constructor and init
+
+function ActiveCode(opts) {
+    if (opts) {
+        this.init(opts);
+    }
+}
+
+ActiveCode.prototype.init = function(opts) {
     RunestoneBase.apply( this, arguments );  // call parent constructor
     var _this = this;
     var suffStart = -1;
+    var orig = opts.orig
     this.origElem = orig;
     this.divid = orig.id;
     this.code = $(orig).text();
@@ -196,7 +205,7 @@ ActiveCode.prototype.builtinRead = function (x) {
         return Sk.builtinFiles["files"][x];
     };
 
-ActiveCode.prototype.ouputfun = function(text) {
+ActiveCode.prototype.outputfun = function(text) {
         // bnm python 3
         var x = text;
         if (x.charAt(0) == '(') {
@@ -214,27 +223,33 @@ ActiveCode.prototype.ouputfun = function(text) {
         $(this.output).append(text);
     };
 
+ActiveCode.prototype.buildProg = function() {
+    // assemble code from prefix, suffix, and editor for running.
+    var pretext;
+    var prog = this.editor.getValue();
+    if (this.includes !== undefined) {
+        // iterate over the includes, in-order prepending to prog
+        pretext = "";
+        for (var x=0; x < this.includes.length; x++) {
+            pretext = pretext + edList[this.includes[x]].editor.getValue();
+        }
+        prog = pretext + prog
+    }
+
+    if(this.suffix) {
+        prog = prog + this.suffix;
+    }
+
+    return prog;
+};
 
 ActiveCode.prototype.runProg = function() {
-        var pretext;
-        var prog = this.editor.getValue();
-        // if includes
+
+        var prog = this.buildProg()
         $(this.output).text('');
 
-        if (this.includes !== undefined) {
-            // iterate over the includes, in-order prepending to prog
-            pretext = "";
-            for (var x=0; x < this.includes.length; x++) {
-                pretext = pretext + edList[this.includes[x]].editor.getValue();
-            }
-            prog = pretext + prog
-        }
 
-        if(this.suffix) {
-            prog = prog + this.suffix;
-        }
-
-        Sk.configure({output : this.ouputfun.bind(this),
+        Sk.configure({output : this.outputfun.bind(this),
               read   : this.builtinRead,
               python3: true,
               imageProxy : 'http://image.runestone.academy:8080/320x'
@@ -244,28 +259,20 @@ ActiveCode.prototype.runProg = function() {
         $(this.runButton).attr('disabled', 'disabled');
         $(this.codeDiv).switchClass("col-md-12","col-md-6",{duration:500,queue:false});
         $(this.outDiv).show({duration:700,queue:false});
-        if(this.language === 'python') {
-            var myPromise = Sk.misceval.asyncToPromise(function() {
-                return Sk.importMainWithBody("<stdin>", false, prog, true);
-            });
-            myPromise.then((function(mod) {
-                $(this.runButton).removeAttr('disabled');
-                this.logRunEvent({'div_id': this.id, 'code': prog, 'errinfo': 'success'}); // Log the run event
-            }).bind(this),
-                function(err) {
-                //logRunEvent({'div_id': this.divid, 'code': this.prog, 'errinfo': err.toString()}); // Log the run event
-                console.log(err.toString());
-                addErrorMessage(err, myDiv)
-            });
-        } else if (this.language === 'javascript') {
-            eval(prog);
-        } else {
-            // html
-            //$('#'+myDiv+'_iframe').remove();
-            //$('#'+myDiv+'_htmlout').show();
-            //$('#'+myDiv+'_htmlout').append('<iframe class="activehtml" id="' + myDiv + '_iframe" srcdoc="' +
-            //prog.replace(/"/g,"'") + '">' + '</iframe>');
-        }
+
+        var myPromise = Sk.misceval.asyncToPromise(function() {
+            return Sk.importMainWithBody("<stdin>", false, prog, true);
+        });
+
+        myPromise.then((function(mod) { // success
+            $(this.runButton).removeAttr('disabled');
+            this.logRunEvent({'div_id': this.id, 'code': prog, 'errinfo': 'success'}); // Log the run event
+        }).bind(this),
+            function(err) {  // fail
+            //logRunEvent({'div_id': this.divid, 'code': this.prog, 'errinfo': err.toString()}); // Log the run event
+            console.log(err.toString());
+            addErrorMessage(err, myDiv)
+        });
 
         if (typeof(allVisualizers) != "undefined") {
             $.each(allVisualizers, function (i, e) {
@@ -275,9 +282,70 @@ ActiveCode.prototype.runProg = function() {
 
     };
 
+JSActiveCode.prototype = new ActiveCode();
+
+function JSActiveCode(opts) {
+    if (opts) {
+        this.init(opts)
+    }
+}
+
+JSActiveCode.prototype.init = function(opts) {
+    ActiveCode.prototype.init.apply(this,arguments)
+}
+
+JSActiveCode.prototype.outputfun = function (a) {
+    var str = "["
+    if (typeof(a) == "object" && a.length) {
+        for (var i = 0; i < a.length; i++)
+            if (typeof(a[i]) == "object" && a[i].length) {
+                str += (i == 0 ? "" : " ") + "["
+                for (var j = 0; j < a[i].length; j++)
+                    str += a[i][j] + (j == a[i].length - 1 ?
+                    "]" + (i == a.length - 1 ? "]" : ",") + "\n" : ", ");
+            } else str += a[i] + (i == a.length - 1 ? "]" : ", ");
+    } else {
+        try {
+            str = JSON.stringify(a);
+        } catch (e) {
+            str = a;
+        }
+    }
+    return str;
+}
+
+JSActiveCode.prototype.runProg = function() {
+    var _this = this;
+    var prog = this.buildProg();
+
+    var write = function(str) {
+        _this.output.innerHTML += _this.outputfun(str);
+    };
+
+    var writeln = function(str) {
+        if (!str) str="";
+        _this.output.innerHTML += _this.outputfun(str)+"<br />";
+    };
+
+    $(this.output).text('')
+    $(this.codeDiv).switchClass("col-md-12","col-md-6",{duration:500,queue:false});
+    $(this.outDiv).show({duration:700,queue:false});
+
+    try {
+        eval(prog)
+    } catch(e) {
+        alert(e);
+    }
+
+};
 
 $(document).ready(function() {
     $('[data-component=activecode]').each( function(index ) {
-        edList[this.id] = new ActiveCode(this);
+        if ($(this).data('lang') === "javascript") {
+            edList[this.id] = new JSActiveCode({'orig': this});
+        } else {   // default is python
+            edList[this.id] = new ActiveCode({'orig': this});
+        }
     });
 });
+
