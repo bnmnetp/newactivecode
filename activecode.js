@@ -342,10 +342,61 @@ JSActiveCode.prototype.runProg = function() {
 
 };
 
+HTMLActiveCode.prototype = new ActiveCode();
+
+function HTMLActiveCode (opts) {
+    if (opts) {
+        this.init(opts);
+    }
+}
+
+HTMLActiveCode.prototype.runProg = function () {
+    var prog = this.buildProg();
+
+//    $('#'+myDiv+'_iframe').remove();
+//    $('#'+myDiv+'_htmlout').show();
+//    $('#'+myDiv+'_htmlout').append('<iframe class="activehtml" id="' + myDiv + '_iframe" srcdoc="' +
+//        prog.replace(/"/g,"'") + '">' + '</iframe>');
+    $(this.output).text('');
+    $(this.codeDiv).switchClass("col-md-12","col-md-6",{duration:500,queue:false});
+    $(this.outDiv).show({duration:700,queue:false});
+
+    $(this.output).html(prog)
+};
+
+HTMLActiveCode.prototype.init = function(opts) {
+    ActiveCode.prototype.init.apply(this,arguments)
+    this.code = $(this.origElem).html();
+    this.editor.setValue(this.code);
+};
+
+HTMLActiveCode.prototype.createOutput = function () {
+    // Create a parent div with two elements:  pre for standard output and a div
+    // to hold turtle graphics output.  We use a div in case the turtle changes from
+    // using a canvas to using some other element like svg in the future.
+    console.log("creating html output")
+    var outDiv = document.createElement("div");
+    $(outDiv).addClass("ac_output col-md-6");
+    this.outDiv = outDiv;
+    this.output = document.createElement('div');
+    $(this.output).css("background-color","white");
+
+    outDiv.appendChild(this.output);
+    this.outerDiv.appendChild(outDiv);
+
+    clearDiv = document.createElement("div");
+    $(clearDiv).css("clear","both");  // needed to make parent div resize properly
+    this.outerDiv.appendChild(clearDiv);
+
+};
+
+
 $(document).ready(function() {
     $('[data-component=activecode]').each( function(index ) {
         if ($(this).data('lang') === "javascript") {
             edList[this.id] = new JSActiveCode({'orig': this});
+        } else if ($(this).data('lang') === 'htmlmixed') {
+            edList[this.id] = new HTMLActiveCode({'orig': this});
         } else {   // default is python
             edList[this.id] = new ActiveCode({'orig': this});
         }
