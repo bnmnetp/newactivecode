@@ -175,6 +175,11 @@ ActiveCode.prototype.toggleEditorVisibility = function () {
 
 };
 
+ActiveCode.prototype.addErrorMessage = function (err) {
+    //logRunEvent({'div_id': this.divid, 'code': this.prog, 'errinfo': err.toString()}); // Log the run event
+    console.log(err.toString());
+};
+
 ActiveCode.prototype.setTimeLimit = function (timer) {
     var timelimit = this.timeLimit;
     if (timer !== undefined ) {
@@ -269,9 +274,7 @@ ActiveCode.prototype.runProg = function() {
             this.logRunEvent({'div_id': this.id, 'code': prog, 'errinfo': 'success'}); // Log the run event
         }).bind(this),
             function(err) {  // fail
-            //logRunEvent({'div_id': this.divid, 'code': this.prog, 'errinfo': err.toString()}); // Log the run event
-            console.log(err.toString());
-            addErrorMessage(err, myDiv)
+            this.addErrorMessage(err)
         });
 
         if (typeof(allVisualizers) != "undefined") {
@@ -334,7 +337,7 @@ JSActiveCode.prototype.runProg = function() {
     try {
         eval(prog)
     } catch(e) {
-        alert(e);
+        this.addErrorMessage(e);
     }
 
 };
